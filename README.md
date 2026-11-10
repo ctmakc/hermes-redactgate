@@ -31,7 +31,7 @@ We sincerely apologize for the duplicate charge — a full refund for one transa
 
 ## Demo
 
-81-second screen recording of a real session (Hermes v0.23, Muse Spark via api.meta.ai):
+[81-second screen recording](https://x.com/mmixbizca/status/2120189452601663749) of a real session (Hermes v0.23, Muse Spark via api.meta.ai):
 `/redact` finds a Hermes side channel, `/redact harden` closes it, a request with a client's
 name, e-mail, phone and card goes out as placeholders, `write_file` gets the real values,
 `/redact last` shows what the provider received, and the audit chain verifies. The recording

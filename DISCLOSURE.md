@@ -26,14 +26,16 @@ normalization in `detect.py`.
 ## Written for the hackathon (2026-11-10 onward)
 
 Everything outside `redactgate_core/`: `__init__.py`, `plugin.yaml`, `engine.py`,
-`detect.py`, `names_en.py`, `vault.py`, `walk.py`, `audit.py`, `commands.py`, `tests/`,
+`detect.py`, `names_en.py`, `vault.py`, `walk.py`, `audit.py`, `commands.py`, `setup_check.py`, `tests/`,
 `scripts/leakcheck.py`, `demo/`, CI, README. The git history of this repository shows the
 dates.
 
 ## Runtime behaviour (rule 13)
 
 No network calls, no model downloads, no shell commands or subprocesses, no background
-threads, no credentials, no telemetry, no self-update. Files are written only inside the
+threads, no credentials, no telemetry, no self-update. Reads the merged Hermes config
+read-only to report settings that bypass plugins; writes Hermes config only when the user runs
+`/redact harden` (one key: `auxiliary.title_generation.model_upgrade_enabled = false`). Files are written only inside the
 plugin's Hermes data folder: `audit.jsonl` (entity type counts, tool names, provider host,
 hashed session ids) and the plugin's `state.json` (random HMAC secret, user-added terms).
 Personal values are held in process memory only.

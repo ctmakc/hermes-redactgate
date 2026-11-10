@@ -13,6 +13,9 @@ import sys
 import time
 
 steps = json.load(open(sys.argv[1]))
+marks_path = os.environ.get("DRIVE_MARKS")
+marks = []
+T0 = time.time()
 log = open(sys.argv[2], "wb") if len(sys.argv) > 2 else None
 cmd = steps["cmd"]
 pid, fd = pty.fork()
@@ -59,6 +62,8 @@ def wait_for(pattern, timeout):
 
 
 for st in steps["steps"]:
+    if "mark" in st:
+        marks.append({"mark": st["mark"], "t": time.time()})
     if "sleep" in st:
         pump(st["sleep"])
     if "wait" in st:
@@ -70,3 +75,6 @@ for st in steps["steps"]:
     if st.get("enter"):
         os.write(fd, b"\r")
 pump(steps.get("tail", 2))
+marks.append({"mark": "end", "t": time.time()})
+if marks_path:
+    json.dump({"t0": T0, "marks": marks}, open(marks_path, "w"), indent=1)

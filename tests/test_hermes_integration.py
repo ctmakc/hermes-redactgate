@@ -14,7 +14,7 @@ hermes_plugins = pytest.importorskip("hermes_cli.plugins")
 middleware = pytest.importorskip("hermes_cli.middleware")
 
 ROOT = Path(__file__).resolve().parent.parent
-FILES = ["__init__.py", "plugin.yaml", "engine.py", "detect.py", "vault.py", "walk.py", "audit.py", "commands.py", "names_en.py"]
+FILES = ["__init__.py", "plugin.yaml", "engine.py", "detect.py", "vault.py", "walk.py", "audit.py", "commands.py", "names_en.py", "setup_check.py"]
 
 
 @pytest.fixture
@@ -70,3 +70,15 @@ def test_round_trip_through_hermes_call_sites(manager):
 def test_slash_command_is_registered(manager):
     cmds = getattr(manager, "_plugin_commands", None) or getattr(manager, "_commands", {})
     assert "redact" in cmds
+
+
+def test_setup_check_and_harden_use_the_real_hermes_config(manager):
+    from redactgate_plugin import setup_check
+
+    assert any("session titles" in f for f in setup_check.findings())
+    msg = setup_check.harden()
+    assert msg.startswith("Done"), msg
+    from hermes_cli.config import load_config_readonly
+
+    assert load_config_readonly()["auxiliary"]["title_generation"]["model_upgrade_enabled"] is False
+    assert not any("session titles" in f for f in setup_check.findings())

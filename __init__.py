@@ -117,5 +117,5 @@ def register(ctx: Any) -> None:
         "redact",
         make_handler(lambda: engine, {"add": _add, "remove": _rm, "list": _terms}),
         description="RedactGate: what the model saw, dry run, audit, custom terms",
-        args_hint="[status|last|test <text>|audit [n]|verify|terms add <t>]",
+        args_hint="[status|last|test <text>|audit [n]|verify|harden|terms add <t>]",
     )

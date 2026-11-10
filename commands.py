@@ -6,6 +6,7 @@ import time
 from collections.abc import Callable
 from typing import Any
 
+from . import setup_check
 from .engine import MODEL_GUIDE, Engine
 from .vault import mask_value
 
@@ -15,6 +16,7 @@ HELP = """/redact — RedactGate privacy layer
   /redact test <text>     dry run: show how <text> would be sent
   /redact audit [n]       last n audit events (counts only, never values)
   /redact verify          check the audit hash chain
+  /redact harden          stop Hermes sending your first message to a model for a session title
   /redact terms           list custom always-hide terms
   /redact terms add <t>   always hide <t> (a client, a project code name)
   /redact terms rm <t>    stop hiding <t>"""
@@ -57,9 +59,10 @@ def make_handler(get_engine: Callable[[], Engine], terms_api: dict[str, Callable
                     "  ⚠ auxiliary model calls carried personal data RedactGate cannot rewrite "
                     "(Hermes runs no llm_request middleware for them): "
                     + _fmt_counts(dict(eng.aux_unprotected))
-                    + ".\n    Session titles: hermes config set auxiliary.title_generation.model_upgrade_enabled false"
-                    + "\n    Others: point auxiliary.<task>.provider at a local model, or add the types to block_types."
+                    + ". See the setup notes below; /redact harden fixes session titles."
                 )
+            for f in setup_check.findings():
+                lines.append("  ⚠ " + f)
             if eng.errors:
                 lines.append(f"  ⚠ redaction errors: {', '.join(eng.errors[-3:])}")
             return "\n".join(lines)
@@ -110,6 +113,9 @@ def make_handler(get_engine: Callable[[], Engine], terms_api: dict[str, Callable
                         extra.append(f"{k}={e[k]}")
                 lines.append(f"  {ts} {e.get('kind', '?'):<22} {' · '.join(str(x) for x in extra)}  #{str(e.get('hash', ''))[:8]}")
             return "\n".join(lines)
+
+        if cmd == "harden":
+            return setup_check.harden()
 
         if cmd == "verify":
             ok, n, msg = eng.audit.verify()

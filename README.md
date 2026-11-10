@@ -3,10 +3,13 @@
 **Your agent works with real client data. The model only ever sees placeholders.**
 
 RedactGate is a Hermes Agent plugin that pseudonymizes personal data at the model boundary.
-Before any request leaves your machine, names, e-mails, phone numbers, payment cards, IBANs and
-national IDs become `[[TYPE_xxxxxx]]` placeholders. The reply you read and the arguments your
-local tools receive get the real values back. It runs offline, uses only the Python standard
-library, and keeps a hash-chained audit journal of what was hidden and where.
+In every request the agent sends to its model, names, e-mails, phone numbers, payment cards,
+IBANs and national IDs become `[[TYPE_xxxxxx]]` placeholders. The reply you read and the
+arguments your local tools receive get the real values back. It also checks the side channels
+Hermes runs outside plugins (session titles, context compression), flags any call that carried
+personal data, and closes the one that fires on every session with `/redact harden`. It runs
+offline, uses only the Python standard library, and keeps a hash-chained audit journal of what
+was hidden and where.
 
 ```text
 you type      My client Jane Doe (jane.doe@acme-corp.com, +1 613 555 0142) was charged twice on
@@ -30,7 +33,7 @@ for every profile and session.
 ```bash
 hermes plugins install ctmakc/hermes-redactgate --enable
 hermes                      # start a session
-/redact                     # status: what is protected
+/redact harden              # once: stop Hermes sending your first message out for a title
 ```
 
 No API keys, no model download, no Python dependencies. Requires Hermes `>= 0.23.0`.
@@ -60,12 +63,21 @@ reasoning blocks (`thinking`, `reasoning`), because providers verify their signa
   generation, MCP servers, other plugins' tools and subagents receive the placeholders, so a
   client's name never reaches a search engine. Change the list with `restore_tools`.
 
-**What it cannot rewrite, and says so.** Hermes runs auxiliary model calls (session titles,
-context compression, vision, approvals) without request middleware. RedactGate watches them
-through the `pre_auxiliary_call` observer; when one carries personal data, it records an
-`aux_unprotected` event and `/redact` shows a warning. Point auxiliary tasks at a local model,
-or put the types you never want sent in `block_types`: a blocked message is stopped before
-any model call and stored by Hermes as a placeholder, so no later call sees it either.
+**What no plugin can rewrite, and what RedactGate does about it.** Hermes runs auxiliary
+model calls (session titles, context compression, vision, approvals) without request
+middleware. In a live test, Hermes's title generator sent the raw first message, name, e-mail,
+phone and card, to the same provider. RedactGate:
+
+* watches every auxiliary call through the `pre_auxiliary_call` observer and records an
+  `aux_unprotected` event with the entity counts when one carried personal data;
+* reads your Hermes config and lists, in `/redact`, each setting that sends conversation text
+  around plugins;
+* `/redact harden` turns off model-made session titles
+  (`auxiliary.title_generation.model_upgrade_enabled: false`); Hermes keeps its instant local
+  title. It changes nothing until you run it;
+* for long sessions, point `auxiliary.compression.provider` at a local model, or list the types
+  you never want sent in `block_types`: a blocked message is stopped before any model call and
+  stored by Hermes as a placeholder, so no later call sees it either.
 
 ## Commands
 
@@ -75,6 +87,7 @@ any model call and stored by Hermes as a placeholder, so no later call sees it e
 /redact test <text>     dry run, no model call
 /redact audit [n]       last n audit events (type counts, tool names, host)
 /redact verify          check the audit hash chain
+/redact harden          turn off model-made session titles (one Hermes setting)
 /redact terms add <t>   always hide <t>: a client, a project code name
 /redact terms rm <t>    stop hiding it
 ```
@@ -133,9 +146,10 @@ cue and a first name outside the list is not recognised. Add such names with
 `/redact terms add`, and once a name has been caught anywhere in a session it is hidden
 everywhere after that.
 
-Other numbers from this repository: 58 tests, including three that load the plugin through
-Hermes's own `PluginManager` and drive `apply_llm_request_middleware`,
-`apply_tool_request_middleware` and `transform_llm_output`; `hermes plugins validate` passes;
+Other numbers from this repository: 63 tests, including four that load the plugin through
+Hermes's own `PluginManager`, drive `apply_llm_request_middleware`,
+`apply_tool_request_middleware` and `transform_llm_output`, and run `/redact harden` against a
+real Hermes config; `hermes plugins validate` passes;
 detection takes about 60 ms for 11,000 characters of new text, and history already seen is
 served from a content cache (a 60-turn request re-sent costs about 2 ms).
 
@@ -164,7 +178,12 @@ settings form in Hermes Desktop.
   (`$HERMES_HOME/plugin-data/<plugin namespace>/`): `audit.jsonl` (type counts, tool names,
   provider host, hashed session ids; rotated at 20 MB) and Hermes's own `state.json` for this
   plugin (a random 32-byte HMAC secret and the terms you add with `/redact terms add`).
-* **Reads:** nothing outside its own data folder and the request payloads Hermes hands it.
+* **Reads:** the request payloads Hermes hands it, its own data folder, and the merged Hermes
+  config (read-only, through `hermes_cli.config.load_config_readonly`) to report settings that
+  bypass plugins.
+* **Writes Hermes config only on `/redact harden`:** one key,
+  `auxiliary.title_generation.model_upgrade_enabled = false`, through
+  `hermes_cli.config.set_config_value` (the code behind `hermes config set`).
 * **No** shell commands, subprocesses, background threads, credentials, telemetry or
   self-update. Personal values are held in process memory only.
 * **Changes what is sent:** the model and non-local tools receive placeholders instead of

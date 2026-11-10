@@ -362,19 +362,42 @@ class Engine:
             return None
 
     # ── observers ──────────────────────────────────────────────────────────
-    def on_pre_auxiliary_call(self, aux_task: str = "", request: Any = None, session_id: str = "", **kw: Any) -> None:
+    def on_pre_auxiliary_call(
+        self, aux_task: str = "", request: Any = None, session_id: str = "",
+        request_messages: Any = None, system_prompt: str = "", **kw: Any,
+    ) -> None:
+        """Observer only: Hermes runs no request middleware for auxiliary calls, so all this
+        hook can do is notice personal data in them and say so (audit + /redact warning)."""
         try:
-            if not isinstance(request, dict):
+            payload: dict[str, Any] = {}
+            if isinstance(request_messages, list) and request_messages:
+                payload["messages"] = request_messages
+            if isinstance(system_prompt, str) and system_prompt:
+                payload["system"] = system_prompt
+            if not payload and isinstance(request, dict):
+                body = request.get("body") if isinstance(request.get("body"), dict) else request
+                payload = {k: body[k] for k in ROOT_KEYS if k in body}
+            if not payload:
                 return
-            counts = self.detector.counts(iter_texts(request))
+            texts = iter_texts(payload)
+            vault = self.vaults.peek(session_id)
+            counts = Counter(self.detector.counts(texts))
+            if vault is not None:  # names learned earlier in the session count too
+                cs, ci = vault.known_patterns()
+                for rx in (cs, ci):
+                    if rx is not None:
+                        for t in texts:
+                            for m in rx.finditer(t or ""):
+                                counts[vault.known_type(m.group(0)) or "PERSON"] += 1
             if counts:
-                self.aux_unprotected[aux_task or "auxiliary"] += 1
+                task = aux_task or "auxiliary"
+                self.aux_unprotected[task] += 1
                 self.audit.append(
                     "aux_unprotected",
                     session=session_ref(session_id),
-                    aux_task=aux_task,
+                    aux_task=task,
                     host=_host(str(kw.get("base_url") or "")),
-                    counts=counts,
+                    counts=dict(counts),
                 )
         except Exception:
             logger.debug("redactgate pre_auxiliary_call failed", exc_info=True)

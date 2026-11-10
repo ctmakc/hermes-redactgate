@@ -128,8 +128,11 @@ def test_audit_never_contains_values_or_placeholders_and_chain_detects_edits(eng
 
 
 def test_auxiliary_calls_with_pii_are_flagged(engine):
-    engine.on_pre_auxiliary_call(aux_task="title_generation", request={"messages": [{"role": "user", "content": USER}]}, session_id="s")
-    engine.on_pre_auxiliary_call(aux_task="compression", request={"messages": [{"role": "user", "content": "hi"}]}, session_id="s")
+    # payload shape of agent/auxiliary_hooks.py _AuxCallHooks.pre: raw request_messages + sanitized request envelope
+    engine.on_pre_auxiliary_call(aux_task="title_generation", request_messages=[{"role": "user", "content": USER}],
+                                 system_prompt="Generate a title", request={"method": "POST", "body": {}}, session_id="s")
+    engine.on_pre_auxiliary_call(aux_task="compression", request_messages=[{"role": "user", "content": "hi"}],
+                                 request={"method": "POST", "body": {"messages": [{"role": "user", "content": "hi"}]}}, session_id="s")
     assert dict(engine.aux_unprotected) == {"title_generation": 1}
     assert engine.audit.tail(1)[0]["kind"] == "aux_unprotected"
 
@@ -176,3 +179,10 @@ def test_name_found_once_is_hidden_everywhere_in_the_session(engine):
     # a learned name is matched case-sensitively: the word "moreau" in lower case is left alone
     other = {"messages": [{"role": "user", "content": "the moreau file format"}]}
     assert engine.on_llm_request(other, session_id="n") is None
+
+
+def test_auxiliary_flag_falls_back_to_request_body_and_learned_names(engine):
+    engine.on_llm_request({"messages": [{"role": "user", "content": "My client Zebulon Moreau called"}]}, session_id="q")
+    engine.on_pre_auxiliary_call(aux_task="title_generation", session_id="q",
+                                 request={"method": "POST", "body": {"messages": [{"role": "user", "content": "Moreau called"}]}})
+    assert engine.audit.tail(1)[0]["counts"] == {"PERSON": 1}

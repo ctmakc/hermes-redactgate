@@ -6,7 +6,7 @@ import time
 from collections.abc import Callable
 from typing import Any
 
-from .engine import Engine
+from .engine import MODEL_GUIDE, Engine
 from .vault import mask_value
 
 HELP = """/redact — RedactGate privacy layer
@@ -57,7 +57,8 @@ def make_handler(get_engine: Callable[[], Engine], terms_api: dict[str, Callable
                     "  ⚠ auxiliary model calls carried personal data RedactGate cannot rewrite "
                     "(Hermes runs no llm_request middleware for them): "
                     + _fmt_counts(dict(eng.aux_unprotected))
-                    + ". Point auxiliary tasks at a local model, or add the types to block_types."
+                    + ".\n    Session titles: hermes config set auxiliary.title_generation.model_upgrade_enabled false"
+                    + "\n    Others: point auxiliary.<task>.provider at a local model, or add the types to block_types."
                 )
             if eng.errors:
                 lines.append(f"  ⚠ redaction errors: {', '.join(eng.errors[-3:])}")
@@ -67,11 +68,12 @@ def make_handler(get_engine: Callable[[], Engine], terms_api: dict[str, Callable
             last = eng.last.get(session_id) or (next(reversed(eng.last.values())) if eng.last else None)
             if last is None:
                 return "No model request yet in this session."
+            preview = last.user_preview.replace(MODEL_GUIDE, "[+ RedactGate's one-paragraph placeholder note for the model]")
             lines = [
                 f"Last request → {last.host or last.provider or 'provider'} ({last.model}), {_ago(last.ts)}",
                 f"Hidden in the full request: {_fmt_counts(last.counts)}",
                 "Your last message, exactly as the model received it:",
-                "  " + (last.user_preview[:1200] + ("…" if len(last.user_preview) > 1200 else "")).replace("\n", "\n  "),
+                "  " + (preview[:1200] + ("…" if len(preview) > 1200 else "")).replace("\n", "\n  "),
             ]
             if last.placeholders:
                 lines.append("Placeholders (values masked here, kept in memory only):")

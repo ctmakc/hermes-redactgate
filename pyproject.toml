@@ -1,0 +1,10 @@
+# Dev tooling only. Hermes installs this plugin from plugin.yaml + __init__.py and needs
+# no Python dependencies: the runtime is standard library only.
+[tool.ruff]
+line-length = 130
+target-version = "py311"
+extend-exclude = ["redactgate_core"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B"]
+ignore = ["E501"]

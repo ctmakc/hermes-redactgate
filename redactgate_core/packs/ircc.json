@@ -1,0 +1,22 @@
+{
+  "code": "IRCC",
+  "name": "Immigration, Refugees and Citizenship Canada",
+  "entity_types": [
+    "UCI",
+    "APPLICATION_NUMBER"
+  ],
+  "patterns": [
+    {
+      "type": "UCI",
+      "regex": "(?:UCI|Client ID|Client Identifier)[ :#]*(?P<value>\\d{4}[ -]?\\d{4,6})\\b",
+      "flags": "IGNORECASE",
+      "validator": "uci_check",
+      "description": "IRCC Unique Client Identifier (UCI / identificateur unique de client)"
+    },
+    {
+      "type": "APPLICATION_NUMBER",
+      "regex": "\\b[EFVWX]\\d{9,10}\\b",
+      "description": "IRCC application / case number (E/F/V/W/X + 9-10 digits)"
+    }
+  ]
+}

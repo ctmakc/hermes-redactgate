@@ -1,0 +1,34 @@
+{
+  "code": "CA",
+  "name": "Canada (federal + Quebec)",
+  "entity_types": [
+    "SIN",
+    "BUSINESS_NUMBER",
+    "GST_HST",
+    "NEQ"
+  ],
+  "patterns": [
+    {
+      "type": "SIN",
+      "regex": "\\b\\d{3}[ -]?\\d{3}[ -]?\\d{3}\\b",
+      "validator": "sin_check",
+      "description": "Canadian SIN / NAS (numero d'assurance sociale)"
+    },
+    {
+      "type": "BUSINESS_NUMBER",
+      "regex": "\\b\\d{9}[ ]?(?:R[CTPMZ]|RC|RP|RT|RM|RZ)[ ]?\\d{4}\\b",
+      "description": "CRA Business Number with program account (RC/RP/RT/RM/RZ)"
+    },
+    {
+      "type": "GST_HST",
+      "regex": "\\b\\d{9}[ ]?RT[ ]?\\d{4}\\b",
+      "description": "GST/HST (TPS/TVH) registration number"
+    },
+    {
+      "type": "NEQ",
+      "regex": "\\bNEQ[ :#]*(?P<value>\\d{4}[ -]?\\d{3}[ -]?\\d{3})\\b",
+      "flags": "IGNORECASE",
+      "description": "Quebec NEQ (Numero d'entreprise du Quebec)"
+    }
+  ]
+}

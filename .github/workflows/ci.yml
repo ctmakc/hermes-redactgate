@@ -1,0 +1,47 @@
+name: ci
+on:
+  push:
+  pull_request:
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install "pytest>=8,<9" "ruff>=0.6,<1"
+      - run: ruff check .
+      - run: pytest -q tests
+      - run: python scripts/leakcheck.py -n 400
+
+  hermes:
+    # Load the plugin through a real Hermes checkout and run the catalog's own gate.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: plugin
+      - uses: actions/checkout@v4
+        with:
+          repository: NousResearch/hermes-agent
+          ref: v0.23.1
+          path: hermes-agent
+      - uses: astral-sh/setup-uv@v5
+      - name: install hermes-agent
+        working-directory: hermes-agent
+        run: |
+          uv venv --python 3.12 ../venv
+          UV_PROJECT_ENVIRONMENT=../venv uv sync --frozen
+          uv pip install --python ../venv/bin/python "pytest>=8,<9"
+      - name: hermes plugins validate
+        env:
+          HERMES_HOME: ${{ runner.temp }}/hermes-home
+        run: ./venv/bin/hermes plugins validate plugin
+      - name: integration tests against Hermes
+        working-directory: plugin
+        run: ../venv/bin/python -m pytest -q tests

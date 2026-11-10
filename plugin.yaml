@@ -1,0 +1,65 @@
+name: redactgate
+version: 1.0.0
+manifest_version: 2
+api_version: 1
+requires_hermes: ">=0.23.0"
+description: >-
+  Reversible PII pseudonymization at the model boundary. Names, e-mails, phones, cards,
+  IBANs and national IDs (CA/US/EU/UA) become [[TYPE_xxxxxx]] placeholders before any
+  model request leaves the machine; real values come back in the reply and in local tool
+  calls. Offline, standard library only, hash-chained audit journal.
+author: Maksym Stepanenko
+license: AGPL-3.0-only
+homepage: https://github.com/ctmakc/hermes-redactgate
+tags: [privacy, pii, redaction, pseudonymization, compliance, gdpr, audit]
+provides_tools: []
+provides_hooks:
+  - pre_llm_call
+  - transform_llm_output
+  - pre_auxiliary_call
+  - post_compaction
+  - on_session_delete
+provides_middleware:
+  - llm_request
+  - tool_request
+config_schema:
+  packs:
+    type: list
+    default: [GENERIC, CA, US, EU, UA, IRCC]
+    description: "Detection packs. GENERIC (email, phone, card, IP, IBAN, DOB) is always on. ALL = every shipped pack."
+  names:
+    type: bool
+    default: true
+    description: Detect person names in English chat text (cue words, honorifics, first-name list).
+  rule_ner:
+    type: bool
+    default: true
+    description: RedactGate document rules for people, companies, addresses and accounts (en/uk/ru).
+  terms:
+    type: list
+    default: []
+    description: Extra words to always hide (client names, project code names). Case-insensitive. /redact terms add also works.
+  allow:
+    type: list
+    default: []
+    description: Values that are never hidden (your own support e-mail, a public company name).
+  ignore_types:
+    type: list
+    default: []
+    description: "Entity types to leave alone, e.g. [IP_ADDRESS]."
+  restore_tools:
+    type: list
+    default: [terminal, process_manage, read_file, write_file, patch, search_files, execute_code, todo_list, memory, clarify]
+    description: "Tools that receive real values in their arguments. Every other tool keeps placeholders. [\"*\"] = all tools."
+  block_types:
+    type: list
+    default: []
+    description: "Entity types that must never reach any model. A user message containing one is blocked before inference, e.g. [CREDIT_CARD, SIN]."
+  fail_mode:
+    type: str
+    default: closed
+    description: "closed = if redaction itself fails, the request content is withheld; open = send it unmodified."
+  guide_model:
+    type: bool
+    default: true
+    description: Add one short paragraph telling the model how to use placeholders (only on turns with hidden values).

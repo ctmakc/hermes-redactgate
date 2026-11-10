@@ -1,0 +1,21 @@
+{
+  "code": "EU",
+  "name": "European Union (banking + tax)",
+  "entity_types": [
+    "IBAN",
+    "VAT"
+  ],
+  "patterns": [
+    {
+      "type": "IBAN",
+      "regex": "\\b[A-Z]{2}\\d{2}(?:[ ]?[A-Z0-9]{4}){2,7}(?:[ ]?[A-Z0-9]{1,3})?\\b",
+      "validator": "iban_mod97",
+      "description": "IBAN (ISO 13616) bank account number"
+    },
+    {
+      "type": "VAT",
+      "regex": "\\b(?:AT|BE|BG|CY|CZ|DE|DK|EE|EL|ES|FI|FR|GB|GR|HR|HU|IE|IT|LT|LU|LV|MT|NL|PL|PT|RO|SE|SI|SK)[ ]?(?=[A-Z0-9]*(?:\\d[A-Z0-9]*){6})[A-Z0-9]{6,12}\\b",
+      "description": "EU VAT identification number (TVA / USt-IdNr / ПДВ) — plugin change: at least 6 digits, so words like GREEN/DEBUG are not VAT numbers"
+    }
+  ]
+}

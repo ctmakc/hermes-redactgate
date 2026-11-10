@@ -1,0 +1,31 @@
+{
+  "code": "UA",
+  "name": "Ukraine (tax + banking)",
+  "entity_types": [
+    "IBAN_UA",
+    "IPN",
+    "EDRPOU"
+  ],
+  "patterns": [
+    {
+      "type": "IBAN_UA",
+      "regex": "\\bUA\\d{2}[ ]?(?:[A-Z0-9]{4}[ ]?){5}[A-Z0-9]{5}\\b",
+      "validator": "iban_mod97",
+      "description": "Ukrainian IBAN (UA, 29 chars) / розрахунковий рахунок"
+    },
+    {
+      "type": "IPN",
+      "regex": "(?:ІПН|IPN|ИНН|РНОКПП|РНУКПН)[ :№#]*(?P<value>\\d{10})\\b",
+      "flags": "IGNORECASE",
+      "validator": "ipn_check",
+      "description": "Ukrainian individual tax number (ІПН / РНОКПП)"
+    },
+    {
+      "type": "EDRPOU",
+      "regex": "(?:ЄДРПОУ|ЕДРПОУ|EDRPOU)[ :№#]*(?P<value>\\d{8})\\b",
+      "flags": "IGNORECASE",
+      "validator": "edrpou_check",
+      "description": "Ukrainian legal-entity code (ЄДРПОУ / EDRPOU)"
+    }
+  ]
+}

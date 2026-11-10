@@ -12,21 +12,31 @@ offline, uses only the Python standard library, and keeps a hash-chained audit j
 was hidden and where.
 
 ```text
-you type      My client Jane Doe (jane.doe@acme-corp.com, +1 613 555 0142) was charged twice on
-              card 4111 1111 1111 1111. Her SIN is 130 692 544.
+you type        My client Jane Doe (jane.doe@acme-corp.com, +1 613 555 0142) was charged twice on
+                card 4111 1111 1111 1111. Her SIN is 130 692 544.
 
-model gets    My client [[PERSON_ddd963]] ([[EMAIL_b8cc9b]], [[PHONE_29aa01]]) was charged twice on
-              card [[CREDIT_CARD_64028b]]. Her SIN is [[SIN_a4f557]].
-
-model writes  Dear [[PERSON_ddd963]], we refunded the duplicate charge and sent the
-              confirmation to [[EMAIL_b8cc9b]].
-
-you read      Dear Jane Doe, we refunded the duplicate charge and sent the confirmation to
-              jane.doe@acme-corp.com.
+the model gets  My client [[PERSON_ddd963]] ([[EMAIL_b8cc9b]], [[PHONE_29aa01]]) was charged twice on
+                card [[CREDIT_CARD_64028b]]. Her SIN is [[SIN_a4f557]].
 ```
 
-The second line is the real output of `/redact test` on the first; the placeholder suffixes differ
-for every profile and session.
+That is the real output of `/redact test`; the placeholder suffixes differ for every profile and
+session. In the [demo](#demo) the model (Muse Spark on api.meta.ai) answered with placeholders
+and called `write_file` with them; RedactGate restored the values for that local tool, so
+`apology.txt` on disk reads:
+
+```text
+Dear Jane Doe,
+We sincerely apologize for the duplicate charge — a full refund for one transaction is on its way, with confirmation to jane.doe@acme-corp.com.
+```
+
+## Demo
+
+81-second screen recording of a real session (Hermes v0.23, Muse Spark via api.meta.ai):
+`/redact` finds a Hermes side channel, `/redact harden` closes it, a request with a client's
+name, e-mail, phone and card goes out as placeholders, `write_file` gets the real values,
+`/redact last` shows what the provider received, and the audit chain verifies. The recording
+is driven by [`demo/drive.py`](demo/drive.py) and cut by [`demo/compose.py`](demo/compose.py)
+(cuts: Hermes start-up wait; typing shown 3× faster).
 
 ## Install
 
